@@ -10,6 +10,7 @@ db.exec(`
     description TEXT,
     image TEXT
   );
+
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -19,12 +20,31 @@ db.exec(`
     total INTEGER,
     date TEXT
   );
+
   CREATE TABLE IF NOT EXISTS favorites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     url TEXT NOT NULL,
     title TEXT,
     date TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    favorite_id INTEGER NOT NULL,
+    author TEXT,
+    text TEXT NOT NULL,
+    date TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS slots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  status TEXT DEFAULT 'free',
+  student_name TEXT,
+  student_contact TEXT,
+  seen INTEGER DEFAULT 1
+);  
 `);
 
 // Добавляем колонку status, если её ещё нет

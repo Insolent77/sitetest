@@ -217,7 +217,7 @@ async function getEmbedInfo(url) {
       };
     }
 
-    // VK / VK Video — embed блокируется, превью недоступно без VK API
+    // VK / VK Video — embed блокируется VK без hash, открываем в новой вкладке
     m = url.match(/(?:vk\.com|vkvideo\.ru)\/video(-?\d+)_(\d+)/);
     if (m) {
       return { embedUrl: url, embeddable: false, type: 'vk', thumbnail: null };
@@ -252,7 +252,8 @@ app.get('/favorites', async (req, res) => {
   const favoritesWithEmbed = await Promise.all(
     favorites.map(async (f) => ({
       ...f,
-      ...(await getEmbedInfo(f.url))
+      ...(await getEmbedInfo(f.url)),
+      comments: db.prepare('SELECT * FROM comments WHERE favorite_id = ? ORDER BY id ASC').all(f.id)
     }))
   );
   res.render('favorites', { title: 'Избранное', favorites: favoritesWithEmbed });
@@ -277,6 +278,144 @@ app.post('/favorites/add', (req, res) => {
 app.post('/favorites/:id/delete', (req, res) => {
   db.prepare('DELETE FROM favorites WHERE id = ?').run(req.params.id);
   res.redirect('/favorites');
+});
+
+// Добавить комментарий к видео
+app.post('/favorites/:id/comments/add', (req, res) => {
+  const { author, text } = req.body;
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: 'Текст обязателен' });
+  }
+
+  const date = new Date().toLocaleString('ru-RU');
+  const result = db.prepare('INSERT INTO comments (favorite_id, author, text, date) VALUES (?, ?, ?, ?)')
+    .run(req.params.id, (author || 'Гость').trim(), text.trim(), date);
+
+  res.json({
+    id: result.lastInsertRowid,
+    author: (author || 'Гость').trim(),
+    text: text.trim(),
+    date: date
+  });
+});
+
+// Удалить комментарий
+app.post('/comments/:id/delete', (req, res) => {
+  db.prepare('DELETE FROM comments WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// === Страница преподавателя: управление слотами ===
+app.get('/teacher', (req, res) => {
+  const slots = db.prepare('SELECT * FROM slots ORDER BY date ASC, time ASC').all();
+  const newBookings = db.prepare('SELECT COUNT(*) AS count FROM slots WHERE status = ? AND seen = 0').get('booked').count;
+  res.render('teacher', { title: 'Кабинет преподавателя', slots: slots, newBookings: newBookings });
+});
+
+// Добавить новый свободный слот
+app.post('/teacher/slots/add', (req, res) => {
+  const { date, time } = req.body;
+  if (date && time) {
+    db.prepare('INSERT INTO slots (date, time, status) VALUES (?, ?, ?)').run(date, time, 'free');
+  }
+  res.redirect('/teacher');
+});
+
+// Удалить слот
+app.post('/teacher/slots/:id/delete', (req, res) => {
+  db.prepare('DELETE FROM slots WHERE id = ?').run(req.params.id);
+  res.redirect('/teacher');
+});
+
+// Отметить бронь как просмотренную
+app.post('/teacher/slots/:id/seen', (req, res) => {
+  db.prepare('UPDATE slots SET seen = 1 WHERE id = ?').run(req.params.id);
+  res.redirect('/teacher');
+});
+
+// Освободить забронированный слот (отменить запись)
+app.post('/teacher/slots/:id/free', (req, res) => {
+  db.prepare('UPDATE slots SET status = ?, student_name = NULL, student_contact = NULL, seen = 1 WHERE id = ?')
+    .run('free', req.params.id);
+  res.redirect('/teacher');
+});
+
+// === Страница для родителей/учеников: запись ===
+app.get('/booking', (req, res) => {
+  const now = new Date();
+  const year = parseInt(req.query.year) || now.getFullYear();
+  const month = parseInt(req.query.month) || (now.getMonth() + 1); // 1-12
+
+  const slots = db.prepare("SELECT * FROM slots WHERE status = 'free' AND date >= date('now') ORDER BY date ASC, time ASC").all();
+
+  // Группируем слоты по дате
+  const grouped = {};
+  slots.forEach(slot => {
+    if (!grouped[slot.date]) grouped[slot.date] = [];
+    grouped[slot.date].push(slot);
+  });
+
+  // Строим сетку календаря для выбранного месяца
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const daysInMonth = lastDay.getDate();
+
+  // День недели первого числа (0 = вс, 1 = пн... переводим на пн=0)
+  let startWeekday = firstDay.getDay();
+  startWeekday = startWeekday === 0 ? 6 : startWeekday - 1;
+
+  const calendarDays = [];
+
+  // Пустые ячейки перед первым числом
+  for (let i = 0; i < startWeekday; i++) {
+    calendarDays.push(null);
+  }
+
+  // Дни месяца
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    calendarDays.push({
+      day: d,
+      date: dateStr,
+      slots: grouped[dateStr] || []
+    });
+  }
+
+  // Навигация по месяцам
+  let prevMonth = month - 1, prevYear = year;
+  if (prevMonth === 0) { prevMonth = 12; prevYear--; }
+  let nextMonth = month + 1, nextYear = year;
+  if (nextMonth === 13) { nextMonth = 1; nextYear++; }
+
+  const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+  res.render('booking', {
+    title: 'Запись на занятие',
+    calendarDays: calendarDays,
+    monthName: monthNames[month - 1],
+    year: year,
+    prevMonth, prevYear, nextMonth, nextYear
+  });
+});
+
+// Забронировать слот
+app.post('/booking/:id', (req, res) => {
+  const { student_name, student_contact } = req.body;
+
+  if (!student_name || !student_name.trim() || !student_contact || !student_contact.trim()) {
+    return res.redirect('/booking');
+  }
+
+  const slot = db.prepare('SELECT * FROM slots WHERE id = ? AND status = ?').get(req.params.id, 'free');
+  if (!slot) {
+    return res.redirect('/booking');
+  }
+
+  db.prepare('UPDATE slots SET status = ?, student_name = ?, student_contact = ?, seen = 0 WHERE id = ?')
+    .run('booked', student_name.trim(), student_contact.trim(), req.params.id);
+
+  res.render('booking-success', { title: 'Запись подтверждена', slot: slot, student_name: student_name.trim() });
 });
 
 app.listen(PORT, () => {

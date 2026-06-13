@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Запись подтверждена!</h1>
+
+  <p>Дата: <strong><%= slot.date %></strong></p>
+  <p>Время: <strong><%= slot.time %></strong></p>
+  <p>Имя: <strong><%= student_name %></strong></p>
+
+  <p class="mt-4">Преподаватель получит уведомление о вашей записи.</p>
+
+  <a href="/booking" class="boxed-btn3 mt-3 d-inline-block">Вернуться к расписанию</a>
+</div>
+
+<%- include('partials/footer') %>

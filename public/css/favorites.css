@@ -353,3 +353,143 @@
   .fav-form { flex-direction: column; }
   .fav-form button { width: 100%; }
 }
+
+/* Счётчик комментариев на карточке */
+.fav-comment-count {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--fav-muted);
+}
+
+/* Блок комментариев внутри модалки */
+.fav-modal-comments {
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--fav-border);
+  padding: 18px;
+}
+
+.fav-comments-empty {
+  color: var(--fav-muted);
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+.fav-comments-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fav-comments-list li {
+  background: var(--fav-bg);
+  border: 1px solid var(--fav-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  position: relative;
+}
+
+.fav-comment-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.fav-comment-head strong {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 13px;
+  color: var(--fav-accent);
+}
+
+.fav-comment-date {
+  font-size: 11px;
+  color: var(--fav-muted);
+  white-space: nowrap;
+}
+
+.fav-comment-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fav-text);
+  word-break: break-word;
+}
+
+.fav-comment-delete-form {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+
+.fav-comment-delete {
+  background: none;
+  border: none;
+  color: var(--fav-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.fav-comment-delete:hover {
+  color: #e5484d;
+  background: rgba(229,72,77,0.08);
+}
+
+.fav-comment-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fav-comment-form input {
+  background: var(--fav-bg);
+  border: 1px solid var(--fav-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--fav-text);
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.15s;
+}
+.fav-comment-form input:focus {
+  outline: none;
+  border-color: var(--fav-accent);
+}
+.fav-comment-form input::placeholder { color: var(--fav-muted); }
+
+.fav-comment-form input[name="author"] {
+  flex: 0 0 140px;
+}
+.fav-comment-form input[name="text"] {
+  flex: 1;
+  min-width: 150px;
+}
+
+.fav-comment-form button {
+  background: var(--fav-accent);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+.fav-comment-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255,180,84,0.35);
+}
+
+@media (max-width: 600px) {
+  .fav-comment-form input[name="author"] {
+    flex: 1 1 100%;
+  }
+}

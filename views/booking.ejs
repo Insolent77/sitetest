@@ -1,0 +1,168 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Запись на занятие</h1>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/booking?year=<%= prevYear %>&month=<%= prevMonth %>" class="btn btn-outline-secondary">← Пред.</a>
+    <h4 class="m-0"><%= monthName %> <%= year %></h4>
+    <a href="/booking?year=<%= nextYear %>&month=<%= nextMonth %>" class="btn btn-outline-secondary">След. →</a>
+  </div>
+
+  <div class="calendar-grid">
+    <div class="calendar-cell calendar-head">Пн</div>
+    <div class="calendar-cell calendar-head">Вт</div>
+    <div class="calendar-cell calendar-head">Ср</div>
+    <div class="calendar-cell calendar-head">Чт</div>
+    <div class="calendar-cell calendar-head">Пт</div>
+    <div class="calendar-cell calendar-head">Сб</div>
+    <div class="calendar-cell calendar-head">Вс</div>
+
+    <% calendarDays.forEach(function(day) { %>
+      <% if (day === null) { %>
+        <div class="calendar-cell calendar-empty"></div>
+      <% } else { %>
+        <div class="calendar-cell <%= day.slots.length > 0 ? 'has-slots' : '' %>"
+             <% if (day.slots.length > 0) { %>
+               data-bs-toggle="modal" data-bs-target="#dayModal"
+               data-date="<%= day.date %>"
+               data-slots='<%= JSON.stringify(day.slots) %>'
+             <% } %>>
+          <span class="calendar-day-number"><%= day.day %></span>
+          <% if (day.slots.length > 0) { %>
+            <span class="calendar-slot-count"><%= day.slots.length %> слот<%= day.slots.length === 1 ? '' : 'ов' %></span>
+          <% } %>
+        </div>
+      <% } %>
+    <% }); %>
+  </div>
+</div>
+
+<!-- Модальное окно: список времён на выбранный день -->
+<div class="modal fade" id="dayModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dayModalTitle">Свободное время</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="dayModalSlots" class="d-flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно: форма записи -->
+<div class="modal fade" id="bookModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="bookForm" method="POST" action="">
+        <div class="modal-header">
+          <h5 class="modal-title">Запись на занятие</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p id="bookModalInfo"></p>
+          <div class="mb-3">
+            <label class="form-label">Ваше имя</label>
+            <input type="text" name="student_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Контакт (телефон или email)</label>
+            <input type="text" name="student_contact" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Записаться</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.calendar-cell {
+  min-height: 80px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.calendar-head {
+  min-height: auto;
+  text-align: center;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  padding: 4px;
+}
+.calendar-empty {
+  background: transparent;
+  border: none;
+}
+.calendar-day-number {
+  font-weight: 600;
+}
+.has-slots {
+  cursor: pointer;
+  border-color: #28a745;
+  background: #f0fff4;
+  transition: background 0.15s;
+}
+.has-slots:hover {
+  background: #d9f7e3;
+}
+.calendar-slot-count {
+  margin-top: auto;
+  font-size: 12px;
+  color: #28a745;
+  font-weight: 600;
+}
+
+@media (max-width: 576px) {
+  .calendar-cell { min-height: 60px; font-size: 12px; padding: 4px; }
+  .calendar-slot-count { font-size: 10px; }
+}
+</style>
+
+<script>
+  const dayModal = document.getElementById('dayModal');
+  dayModal.addEventListener('show.bs.modal', (event) => {
+    const cell = event.relatedTarget;
+    const date = cell.dataset.date;
+    const slots = JSON.parse(cell.dataset.slots);
+
+    document.getElementById('dayModalTitle').textContent = 'Свободное время: ' + date;
+
+    const container = document.getElementById('dayModalSlots');
+    container.innerHTML = '';
+
+    slots.forEach(slot => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary';
+      btn.textContent = slot.time;
+      btn.addEventListener('click', () => {
+        document.getElementById('bookForm').action = '/booking/' + slot.id;
+        document.getElementById('bookModalInfo').textContent = `Дата: ${date}, время: ${slot.time}`;
+
+        // Закрываем дневное окно и открываем форму записи
+        const bsDay = bootstrap.Modal.getInstance(dayModal);
+        bsDay.hide();
+        const bookModal = new bootstrap.Modal(document.getElementById('bookModal'));
+        bookModal.show();
+      });
+      container.appendChild(btn);
+    });
+  });
+</script>
+
+<%- include('partials/footer') %>

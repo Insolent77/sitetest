@@ -1,0 +1,81 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Кабинет преподавателя</h1>
+
+  <% if (newBookings > 0) { %>
+    <div class="alert alert-warning">
+      У вас <strong><%= newBookings %></strong> новых бронирований!
+    </div>
+  <% } %>
+
+  <h4 class="mt-4">Добавить свободный слот</h4>
+  <form action="/teacher/slots/add" method="POST" class="row g-2 mb-4 align-items-end">
+    <div class="col-auto">
+      <label class="form-label">Дата</label>
+      <input type="date" name="date" class="form-control" required>
+    </div>
+    <div class="col-auto">
+      <label class="form-label">Время</label>
+      <input type="time" name="time" class="form-control" required>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Добавить</button>
+    </div>
+  </form>
+
+  <h4 class="mt-4">Все слоты</h4>
+
+  <% if (slots.length === 0) { %>
+    <p>Слотов пока нет.</p>
+  <% } else { %>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Время</th>
+          <th>Статус</th>
+          <th>Ученик</th>
+          <th>Контакт</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% slots.forEach(function(slot) { %>
+          <tr class="<%= (slot.status === 'booked' && !slot.seen) ? 'table-warning' : '' %>">
+            <td><%= slot.date %></td>
+            <td><%= slot.time %></td>
+            <td>
+              <% if (slot.status === 'free') { %>
+                <span class="badge bg-success">Свободно</span>
+              <% } else { %>
+                <span class="badge bg-secondary">Занято</span>
+              <% } %>
+            </td>
+            <td><%= slot.student_name || '-' %></td>
+            <td><%= slot.student_contact || '-' %></td>
+            <td>
+              <div class="d-flex gap-2">
+                <% if (slot.status === 'booked' && !slot.seen) { %>
+                  <form action="/teacher/slots/<%= slot.id %>/seen" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Отметить просмотренным</button>
+                  </form>
+                <% } %>
+                <% if (slot.status === 'booked') { %>
+                  <form action="/teacher/slots/<%= slot.id %>/free" method="POST">
+                    <button type="submit" class="btn btn-sm btn-outline-warning">Отменить запись</button>
+                  </form>
+                <% } %>
+                <form action="/teacher/slots/<%= slot.id %>/delete" method="POST">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

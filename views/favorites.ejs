@@ -41,7 +41,7 @@
         <div class="fav-card" style="--i: <%= i %>">
           <div class="fav-video">
             <% if (f.embeddable) { %>
-              <button class="fav-play" data-embed="<%= f.embedUrl %>" data-title="<%= (f.title || 'Видео').replace(/"/g, '&quot;') %>" aria-label="Воспроизвести видео">
+              <button class="fav-play" data-embed="<%= f.embedUrl %>" data-title="<%= (f.title || 'Видео').replace(/"/g, '&quot;') %>" data-fav-id="<%= f.id %>" aria-label="Воспроизвести видео">
                 <span class="fav-play-icon">▶</span>
                 <span class="fav-play-label">Смотреть</span>
               </button>
@@ -67,8 +67,41 @@
                 </form>
               </div>
             </div>
+            <% if (f.comments.length > 0) { %>
+              <div class="fav-comment-count">💬 <%= f.comments.length %></div>
+            <% } %>
           </div>
         </div>
+
+        <!-- Скрытый шаблон комментариев для модалки -->
+        <template class="fav-comments-template" data-fav-id="<%= f.id %>">
+          <div class="fav-comments">
+            <% if (f.comments.length > 0) { %>
+              <ul class="fav-comments-list">
+                <% f.comments.forEach(c => { %>
+                  <li>
+                    <div class="fav-comment-head">
+                      <strong><%= c.author %></strong>
+                      <span class="fav-comment-date"><%= c.date %></span>
+                    </div>
+                    <p class="fav-comment-text"><%= c.text %></p>
+                    <form action="/comments/<%= c.id %>/delete" method="POST" class="fav-comment-delete-form">
+                      <button type="submit" class="fav-comment-delete">Удалить</button>
+                    </form>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } else { %>
+              <p class="fav-comments-empty">Пока нет комментариев. Будьте первым!</p>
+            <% } %>
+
+            <form action="/favorites/<%= f.id %>/comments/add" method="POST" class="fav-comment-form">
+              <input type="text" name="author" placeholder="Ваше имя">
+              <input type="text" name="text" placeholder="Напишите комментарий..." required>
+              <button type="submit">Отправить</button>
+            </form>
+          </div>
+        </template>
       <% }) %>
     </div>
   <% } %>
@@ -84,46 +117,152 @@
       <div class="fav-modal-video">
         <iframe id="fav-modal-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>
       </div>
+      <div class="fav-modal-comments" id="fav-modal-comments"></div>
     </div>
   </div>
 
-  <script>
-    (function () {
-      const modal = document.getElementById('fav-modal');
-      const iframe = document.getElementById('fav-modal-iframe');
-      const titleEl = document.getElementById('fav-modal-title');
+ <script>
+  (function () {
+    const modal = document.getElementById('fav-modal');
+    const iframe = document.getElementById('fav-modal-iframe');
+    const titleEl = document.getElementById('fav-modal-title');
+    const commentsContainer = document.getElementById('fav-modal-comments');
 
-      function openModal(embedUrl, title) {
-        iframe.src = embedUrl;
-        titleEl.textContent = title || '';
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-      }
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
 
-      function closeModal() {
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
-        iframe.src = '';
-        document.body.style.overflow = '';
-      }
+    function renderComment(c) {
+      const li = document.createElement('li');
+      li.dataset.commentId = c.id;
+      li.innerHTML = `
+        <div class="fav-comment-head">
+          <strong>${escapeHtml(c.author)}</strong>
+          <span class="fav-comment-date">${escapeHtml(c.date)}</span>
+        </div>
+        <p class="fav-comment-text">${escapeHtml(c.text)}</p>
+        <form class="fav-comment-delete-form" data-comment-id="${c.id}">
+          <button type="button" class="fav-comment-delete">Удалить</button>
+        </form>
+      `;
+      return li;
+    }
 
-      document.querySelectorAll('.fav-play').forEach(btn => {
-        btn.addEventListener('click', () => {
-          openModal(btn.dataset.embed, btn.dataset.title);
+    function bindDeleteButtons() {
+      commentsContainer.querySelectorAll('.fav-comment-delete-form').forEach(form => {
+        form.addEventListener('submit', handleDelete);
+        form.querySelector('button').addEventListener('click', (e) => {
+          e.preventDefault();
+          handleDelete({ target: form });
         });
       });
+    }
 
-      modal.querySelectorAll('[data-close]').forEach(el => {
-        el.addEventListener('click', closeModal);
-      });
+    async function handleDelete(e) {
+      const form = e.target;
+      const commentId = form.dataset.commentId;
 
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-          closeModal();
+      try {
+        await fetch(`/comments/${commentId}/delete`, { method: 'POST' });
+        const li = form.closest('li');
+        li.remove();
+
+        const list = commentsContainer.querySelector('.fav-comments-list');
+        if (list && list.children.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'fav-comments-empty';
+          empty.textContent = 'Пока нет комментариев. Будьте первым!';
+          list.replaceWith(empty);
         }
+      } catch (err) {
+        console.error('Ошибка удаления комментария', err);
+      }
+    }
+
+    function openModal(embedUrl, title, favId) {
+      iframe.src = embedUrl;
+      titleEl.textContent = title || '';
+
+      commentsContainer.innerHTML = '';
+      const template = document.querySelector(`.fav-comments-template[data-fav-id="${favId}"]`);
+      if (template) {
+        commentsContainer.appendChild(template.content.cloneNode(true));
+        bindDeleteButtons();
+
+        const form = commentsContainer.querySelector('.fav-comment-form');
+        form.dataset.favId = favId;
+        form.addEventListener('submit', handleAddComment);
+      }
+
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    async function handleAddComment(e) {
+      e.preventDefault();
+      const form = e.target;
+      const favId = form.dataset.favId;
+      const authorInput = form.querySelector('input[name="author"]');
+      const textInput = form.querySelector('input[name="text"]');
+
+      const text = textInput.value.trim();
+      if (!text) return;
+
+      try {
+        const res = await fetch(`/favorites/${favId}/comments/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ author: authorInput.value, text: text })
+        });
+
+        if (!res.ok) return;
+        const comment = await res.json();
+
+        let list = commentsContainer.querySelector('.fav-comments-list');
+        if (!list) {
+          const empty = commentsContainer.querySelector('.fav-comments-empty');
+          list = document.createElement('ul');
+          list.className = 'fav-comments-list';
+          if (empty) empty.replaceWith(list);
+          else commentsContainer.insertBefore(list, form);
+        }
+
+        list.appendChild(renderComment(comment));
+
+        textInput.value = '';
+        authorInput.value = '';
+      } catch (err) {
+        console.error('Ошибка отправки комментария', err);
+      }
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      iframe.src = '';
+      commentsContainer.innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.fav-play').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openModal(btn.dataset.embed, btn.dataset.title, btn.dataset.favId);
       });
-    })();
-  </script>
+    });
+
+    modal.querySelectorAll('[data-close]').forEach(el => {
+      el.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        closeModal();
+      }
+    });
+  })();
+</script>
 </body>
 </html>
