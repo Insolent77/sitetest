@@ -1,0 +1,39 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Корзина</h1>
+
+  <% if (cart.length === 0) { %>
+    <p>Корзина пуста.</p>
+    <a href="/products" class="boxed-btn3">Перейти в каталог</a>
+  <% } else { %>
+    <table class="table">
+  <thead>
+    <tr>
+      <th>Товар</th>
+      <th>Цена</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% cart.forEach(function(item, index) { %>
+      <tr>
+        <td><%= item.name %></td>
+        <td><%= item.price %> руб.</td>
+        <td>
+          <form action="/cart/remove/<%= index %>" method="POST">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+          </form>
+        </td>
+      </tr>
+    <% }); %>
+  </tbody>
+</table>
+
+    <h3 class="mt-4">Итого: <%= total %> руб.</h3>
+<a href="/checkout" class="boxed-btn3 mt-3 d-inline-block">Оформить заказ</a>
+    <a href="/products" class="boxed-btn3 mt-3 d-inline-block">Продолжить покупки</a>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

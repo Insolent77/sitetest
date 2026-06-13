@@ -1,0 +1,52 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Оформление заказа</h1>
+
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Ваш заказ:</h4>
+      <ul class="list-group mb-4">
+        <% cart.forEach(function(item) { %>
+          <li class="list-group-item d-flex justify-content-between">
+            <span><%= item.name %></span>
+            <span><%= item.price %> руб.</span>
+          </li>
+        <% }); %>
+      </ul>
+      <h5>Итого: <%= total %> руб.</h5>
+    </div>
+
+    <div class="col-md-6">
+      <h4>Данные для доставки:</h4>
+
+      <% if (errors && errors.length > 0) { %>
+        <div class="alert alert-danger">
+          <ul class="mb-0">
+            <% errors.forEach(function(err) { %>
+              <li><%= err %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <form action="/checkout" method="POST">
+        <div class="mb-3">
+          <label class="form-label">Имя</label>
+          <input type="text" name="name" class="form-control" value="<%= old.name || '' %>" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Телефон</label>
+          <input type="tel" name="phone" class="form-control" value="<%= old.phone || '' %>" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Адрес доставки</label>
+          <input type="text" name="address" class="form-control" value="<%= old.address || '' %>" required>
+        </div>
+        <button type="submit" class="boxed-btn3">Подтвердить заказ</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

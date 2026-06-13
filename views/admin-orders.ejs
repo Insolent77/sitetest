@@ -1,0 +1,25 @@
+<%- include('partials/header') %>
+
+<div class="container" style="padding-top: 150px; padding-bottom: 80px;">
+  <h1 class="mb-4">Заказы</h1>
+
+  <% if (orders.length === 0) { %>
+    <p>Заказов пока нет.</p>
+  <% } else { %>
+    <% orders.forEach(function(order) { %>
+      <div class="card mb-3 p-3">
+        <p><strong>№ <%= order.id %></strong> — <%= order.date %></p>
+        <p>Клиент: <%= order.name %>, тел: <%= order.phone %></p>
+        <p>Адрес: <%= order.address %></p>
+        <ul>
+          <% order.items.forEach(function(item) { %>
+            <li><%= item.name %> — <%= item.price %> руб.</li>
+          <% }); %>
+        </ul>
+        <p><strong>Итого: <%= order.total %> руб.</strong></p>
+      </div>
+    <% }); %>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>

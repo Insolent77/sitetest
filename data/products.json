@@ -1,0 +1,25 @@
+
+
+[
+  {
+    "id": 1,
+    "name": "Парацетамол 500мг",
+    "price": 50,
+    "description": "Жаропонижающее и обезболивающее средство",
+    "image": "/img/paracetamol.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Ибупрофен 400мг",
+    "price": 80,
+    "description": "Противовоспалительное средство",
+    "image": "/img/ibuprofen.jpg"
+  },
+  {
+    "id": 3,
+    "name": "Витамин C",
+    "price": 120,
+    "description": "Укрепление иммунитета",
+    "image": "/img/vitamin-c.jpg"
+  }
+]
