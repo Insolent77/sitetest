@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/favorites.css">
+</head>
+<body class="fav-page">
+  <header class="fav-header">
+    <a href="/" class="fav-back">← На главную</a>
+    <h1>Избранное</h1>
+    <p class="fav-count">
+      <% if (favorites.length === 0) { %>
+        пока пусто
+      <% } else { %>
+        <%= favorites.length %> <%= favorites.length === 1 ? 'видео' : 'видео сохранено' %>
+      <% } %>
+    </p>
+  </header>
+
+  <form action="/favorites/add" method="POST" class="fav-form">
+    <input type="url" name="url" placeholder="Вставьте ссылку на видео…" required>
+    <input type="text" name="title" placeholder="Название (необязательно)">
+    <button type="submit">
+      <span>Сохранить</span>
+    </button>
+  </form>
+
+  <% if (favorites.length === 0) { %>
+    <div class="fav-empty">
+      <p>Здесь появятся видео, которые вы захотите посмотреть позже.</p>
+      <p class="fav-empty-sub">Вставьте ссылку выше — YouTube, Vimeo, VK Video, RuTube и другие.</p>
+    </div>
+  <% } else { %>
+    <div class="fav-grid">
+      <% favorites.forEach((f, i) => { %>
+        <div class="fav-card" style="--i: <%= i %>">
+          <div class="fav-video">
+            <% if (f.embeddable) { %>
+              <button class="fav-play" data-embed="<%= f.embedUrl %>" data-title="<%= (f.title || 'Видео').replace(/"/g, '&quot;') %>" aria-label="Воспроизвести видео">
+                <span class="fav-play-icon">▶</span>
+                <span class="fav-play-label">Смотреть</span>
+              </button>
+            <% } else { %>
+              <a href="<%= f.url %>" target="_blank" class="fav-noembed">
+                <span class="fav-noembed-icon">▶</span>
+                <% if (f.type === 'vk') { %>
+                  <span>Открыть в VK Видео</span>
+                <% } else { %>
+                  <span>Открыть видео</span>
+                <% } %>
+              </a>
+            <% } %>
+          </div>
+          <div class="fav-meta">
+            <h3><%= f.title || 'Без названия' %></h3>
+            <div class="fav-actions">
+              <span class="fav-date"><%= f.date %></span>
+              <div class="fav-links">
+                <a href="<%= f.url %>" target="_blank" class="fav-link">Оригинал</a>
+                <form action="/favorites/<%= f.id %>/delete" method="POST">
+                  <button type="submit" class="fav-delete" aria-label="Удалить из избранного">Удалить</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <!-- Модальное окно для просмотра видео -->
+  <div class="fav-modal" id="fav-modal" aria-hidden="true">
+    <div class="fav-modal-backdrop" data-close></div>
+    <div class="fav-modal-content">
+      <div class="fav-modal-header">
+        <span class="fav-modal-title" id="fav-modal-title"></span>
+        <button class="fav-modal-close" data-close aria-label="Закрыть">✕</button>
+      </div>
+      <div class="fav-modal-video">
+        <iframe id="fav-modal-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; fullscreen"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const modal = document.getElementById('fav-modal');
+      const iframe = document.getElementById('fav-modal-iframe');
+      const titleEl = document.getElementById('fav-modal-title');
+
+      function openModal(embedUrl, title) {
+        iframe.src = embedUrl;
+        titleEl.textContent = title || '';
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        iframe.src = '';
+        document.body.style.overflow = '';
+      }
+
+      document.querySelectorAll('.fav-play').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openModal(btn.dataset.embed, btn.dataset.title);
+        });
+      });
+
+      modal.querySelectorAll('[data-close]').forEach(el => {
+        el.addEventListener('click', closeModal);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+          closeModal();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

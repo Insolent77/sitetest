@@ -10,7 +10,6 @@ db.exec(`
     description TEXT,
     image TEXT
   );
-
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -18,6 +17,12 @@ db.exec(`
     address TEXT,
     items TEXT,
     total INTEGER,
+    date TEXT
+  );
+  CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    title TEXT,
     date TEXT
   );
 `);

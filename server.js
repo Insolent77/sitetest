@@ -1,5 +1,6 @@
 const express = require('express');
 const session = require('express-session');
+const https = require('https');
 const db = require('./db');
 
 const app = express();
@@ -167,7 +168,116 @@ app.post('/admin/orders/:id/status', (req, res) => {
 app.post('/admin/orders/:id/delete', (req, res) => {
   db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
   res.redirect('/admin/orders');
-}); 
+});
+
+// Получить JSON по URL (для oEmbed Vimeo/RuTube)
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+// Хелпер: получить информацию для встраивания видео + превью
+async function getEmbedInfo(url) {
+  try {
+    // YouTube (обычные ссылки, youtu.be и Shorts)
+    let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/);
+    if (m) {
+      return {
+        embedUrl: `https://www.youtube.com/embed/${m[1]}`,
+        embeddable: true,
+        type: 'youtube',
+        thumbnail: `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`
+      };
+    }
+
+    // Vimeo
+    m = url.match(/vimeo\.com\/(\d+)/);
+    if (m) {
+      let thumbnail = null;
+      try {
+        const data = await fetchJson(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`);
+        thumbnail = data.thumbnail_url || null;
+      } catch (e) { /* без превью */ }
+      return {
+        embedUrl: `https://player.vimeo.com/video/${m[1]}`,
+        embeddable: true,
+        type: 'vimeo',
+        thumbnail: thumbnail
+      };
+    }
+
+    // VK / VK Video — embed блокируется, превью недоступно без VK API
+    m = url.match(/(?:vk\.com|vkvideo\.ru)\/video(-?\d+)_(\d+)/);
+    if (m) {
+      return { embedUrl: url, embeddable: false, type: 'vk', thumbnail: null };
+    }
+
+    // RuTube
+    m = url.match(/rutube\.ru\/video\/([a-f0-9]+)/);
+    if (m) {
+      let thumbnail = null;
+      try {
+        const data = await fetchJson(`https://rutube.ru/api/oembed/?url=${encodeURIComponent(url)}&format=json`);
+        thumbnail = data.thumbnail_url || null;
+      } catch (e) { /* без превью */ }
+      return {
+        embedUrl: `https://rutube.ru/play/embed/${m[1]}`,
+        embeddable: true,
+        type: 'rutube',
+        thumbnail: thumbnail
+      };
+    }
+
+    // Прочие ссылки
+    return { embedUrl: url, embeddable: false, type: 'other', thumbnail: null };
+  } catch (e) {
+    return { embedUrl: url, embeddable: false, type: 'other', thumbnail: null };
+  }
+}
+
+// Страница избранного
+app.get('/favorites', async (req, res) => {
+  const favorites = db.prepare('SELECT * FROM favorites ORDER BY id DESC').all();
+  const favoritesWithEmbed = await Promise.all(
+    favorites.map(async (f) => ({
+      ...f,
+      ...(await getEmbedInfo(f.url))
+    }))
+  );
+  res.render('favorites', { title: 'Избранное', favorites: favoritesWithEmbed });
+});
+
+// Добавить видео в избранное
+app.post('/favorites/add', (req, res) => {
+  const { url, title } = req.body;
+
+  if (!url || !url.trim()) {
+    return res.redirect('/favorites');
+  }
+
+  const date = new Date().toLocaleString('ru-RU');
+  db.prepare('INSERT INTO favorites (url, title, date) VALUES (?, ?, ?)')
+    .run(url.trim(), (title || '').trim(), date);
+
+  res.redirect('/favorites');
+});
+
+// Удалить видео из избранного
+app.post('/favorites/:id/delete', (req, res) => {
+  db.prepare('DELETE FROM favorites WHERE id = ?').run(req.params.id);
+  res.redirect('/favorites');
+});
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);
