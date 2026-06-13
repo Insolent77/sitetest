@@ -22,6 +22,13 @@ db.exec(`
   );
 `);
 
+// Добавляем колонку status, если её ещё нет
+try {
+  db.exec(`ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Новый'`);
+} catch (e) {
+  // колонка уже существует - игнорируем ошибку
+}
+
 // Если таблица products пустая - заполняем из products.json
 const count = db.prepare('SELECT COUNT(*) AS count FROM products').get().count;
 if (count === 0) {

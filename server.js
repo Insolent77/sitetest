@@ -18,7 +18,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Главная страница
 app.get('/', (req, res) => {
-  res.render('index', { title: 'Моя аптека' });
+  const popularProducts = db.prepare('SELECT * FROM products LIMIT 2').all();
+  res.render('index', { title: 'Моя аптека', popularProducts: popularProducts });
 });
 
 // Страница каталога
@@ -154,6 +155,19 @@ app.get('/admin/orders', (req, res) => {
 
   res.render('admin-orders', { title: 'Заказы', orders: orders });
 });
+
+// Изменить статус заказа
+app.post('/admin/orders/:id/status', (req, res) => {
+  const { status } = req.body;
+  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
+  res.redirect('/admin/orders');
+});
+
+// Удалить заказ
+app.post('/admin/orders/:id/delete', (req, res) => {
+  db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+  res.redirect('/admin/orders');
+}); 
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен: http://localhost:${PORT}`);

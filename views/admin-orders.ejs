@@ -9,6 +9,7 @@
     <% orders.forEach(function(order) { %>
       <div class="card mb-3 p-3">
         <p><strong>№ <%= order.id %></strong> — <%= order.date %></p>
+        <p>Статус: <strong><%= order.status %></strong></p>
         <p>Клиент: <%= order.name %>, тел: <%= order.phone %></p>
         <p>Адрес: <%= order.address %></p>
         <ul>
@@ -17,6 +18,21 @@
           <% }); %>
         </ul>
         <p><strong>Итого: <%= order.total %> руб.</strong></p>
+        <div class="d-flex align-items-center gap-2 mt-2">
+  <form action="/admin/orders/<%= order.id %>/status" method="POST" class="d-flex align-items-center gap-2">
+    <select name="status" class="form-select form-select-sm" style="width: auto;">
+      <option value="Новый" <%= order.status === 'Новый' ? 'selected' : '' %>>Новый</option>
+      <option value="В обработке" <%= order.status === 'В обработке' ? 'selected' : '' %>>В обработке</option>
+      <option value="Доставлен" <%= order.status === 'Доставлен' ? 'selected' : '' %>>Доставлен</option>
+      <option value="Отменён" <%= order.status === 'Отменён' ? 'selected' : '' %>>Отменён</option>
+    </select>
+    <button type="submit" class="btn btn-sm btn-primary">Сохранить</button>
+  </form>
+
+  <form action="/admin/orders/<%= order.id %>/delete" method="POST">
+    <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+  </form>
+</div>
       </div>
     <% }); %>
   <% } %>
